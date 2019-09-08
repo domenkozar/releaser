@@ -1,0 +1,22 @@
+cabal-version: 2.4
+name: releaser
+version: 0.2.0.0
+license: Apache-2.0
+license-file: LICENSE
+maintainer: domen@dev.si
+author: Domen Kozar
+category: Development
+extra-source-files:
+    CHANGELOG.md
+
+library
+    exposed-modules:
+        Releaser.Primitives
+    hs-source-dirs: src
+    default-language: Haskell2010
+    build-depends:
+        base ^>=4.12.0.0,
+        Cabal -any,
+        regex-pcre,
+        process,
+        pretty-terminal
