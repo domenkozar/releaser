@@ -20,3 +20,12 @@ library
         regex-pcre,
         process,
         pretty-terminal
+
+executable releaser
+    main-is:            Main.hs
+    other-modules:      Paths_releaser
+    autogen-modules:    Paths_releaser
+    hs-source-dirs:     releaser
+    build-depends:
+        base  >=4.7 && <5
+        , releaser

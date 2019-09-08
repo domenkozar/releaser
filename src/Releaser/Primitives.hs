@@ -12,6 +12,7 @@ module Releaser.Primitives (
   , gitTag
   , gitCommit
   , gitPush
+  , gitPushTags
   , gitAssertEmptyStaging
   -- utilities
   , prompt
@@ -157,6 +158,11 @@ gitPush remote = do
   logStep $ "Pushing git to " <> remote
   void $ readProcess "git" ["push", remote, "HEAD"] mempty
 
+gitPushTags :: String -> IO ()
+gitPushTags remote = do
+  logStep $ "Pushing git to " <> remote
+  void $ readProcess "git" ["push", remote, "--tags"] mempty
+
 gitAssertEmptyStaging :: IO ()
 gitAssertEmptyStaging = do
   logStep "Assserting there are no uncommitted files"
@@ -165,8 +171,8 @@ gitAssertEmptyStaging = do
   then return ()
   else error "git status is not clean"
 
-changelogPrepare :: String -> IO ()
-changelogPrepare file = do
+changelogPrepare :: IO ()
+changelogPrepare = do
   logStep "Assserting there are no uncommitted files"
   editorEnv <- lookupEnv "EDITOR"
   case editorEnv of
@@ -179,4 +185,4 @@ changelogPrepare file = do
         ExitSuccess -> return ()
         ExitFailure i -> do
           logStep $ editor <> " failed with " <> show i <> ", retrying"
-          changelogPrepare file
+          changelogPrepare
