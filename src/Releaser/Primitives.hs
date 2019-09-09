@@ -16,6 +16,7 @@ module Releaser.Primitives (
   , gitAssertEmptyStaging
   -- utilities
   , prompt
+  , abort
   , logStep
   , changelogPrepare
   ) where
@@ -24,7 +25,7 @@ import System.IO
 import System.Process
 import System.Console.Pretty (Color(..), color)
 import System.Environment (lookupEnv)
-import System.Exit (ExitCode(..))
+import System.Exit (ExitCode(..), exitFailure)
 import Text.Regex.PCRE
 import Data.Functor (void)
 import Data.List (intercalate)
@@ -41,14 +42,19 @@ import Distribution.Simple.Utils (tryFindPackageDesc)
 import Distribution.Types.PackageName (unPackageName)
 
 logStep :: String -> IO ()
-logStep txt = 
-  putStrLn $ color Green ">> " <> txt
+logStep str = 
+  putStrLn $ color Green ">> " <> str
 
 prompt :: String -> IO String
 prompt str = do
-    putStr str
-    hFlush stdout
-    getLine  
+  putStr $ color Yellow ">> " <> str
+  hFlush stdout
+  getLine  
+
+abort :: String -> IO a
+abort str = do
+  putStrLnErr $ color Red ">> " <> str
+  exitFailure
 
 data CabalInfo = CabalInfo 
   { name :: String
@@ -75,18 +81,17 @@ cabalWriteVersion :: FilePath -> String -> IO ()
 cabalWriteVersion dir versionStr = do
   cabalFile <- tryFindPackageDesc dir
   genericPackageDescription <- readGenericPackageDescription silent cabalFile
+  -- TODO: handle the read failure nicely
+  version <- case parseMaybe parseVersion versionStr of
+    Nothing -> abort "parsing the cabal version failed"
+    Just ver -> return ver
   let
     pd = packageDescription genericPackageDescription
     p = package $ packageDescription genericPackageDescription
-    gpd = genericPackageDescription { packageDescription = pd { package = p { pkgVersion = version } } }
+    gpd = genericPackageDescription { packageDescription = pd { package = p { pkgVersion = mkVersion' version } } }
   writeGenericPackageDescription cabalFile gpd
   logStep $ "Bumped " <> unPackageName (pkgName p) <> " to " <> versionStr
   where
-    -- TODO: handle the read failure nicely
-    version = mkVersion' $ case parseMaybe parseVersion versionStr of
-      Nothing -> error "parsing the cabal version failed"
-      Just ver -> ver
-
     parseMaybe :: ReadP a -> String -> Maybe a
     parseMaybe parser input =
       case readP_to_S parser input of
@@ -137,15 +142,15 @@ gitCheckout tag = do
   logStep $ "Running $ git checkout -b " <> tag
   tags <- gitGetTags
   if elem tag tags
-  then error "git branch already exists, please delete it to start over"
+  then abort "git branch already exists, please delete it to start over"
   else void $ readProcess "git" ["checkout", "-b", tag] mempty
 
 gitTag :: String -> IO ()
 gitTag tag = do
-  logStep $ "Running $ git tag --annotate --sign" <> tag
+  logStep $ "Running $ git tag --annotate --sign " <> tag
   tags <- gitGetTags
   if elem tag tags
-  then error "git tag already exists, please delete it and start over"
+  then abort "git tag already exists, please delete it and start over"
   else void $ readProcess "git" ["tag", "--annotate", "--sign", tag] mempty
 
 gitCommit :: String -> IO ()
@@ -169,14 +174,14 @@ gitAssertEmptyStaging = do
   output <- readProcess "git" ["status", "--untracked-files=no", "--porcelain"] mempty
   if output == ""
   then return ()
-  else error "git status is not clean"
+  else abort "git status is not clean"
 
 changelogPrepare :: IO ()
 changelogPrepare = do
   logStep "Assserting there are no uncommitted files"
   editorEnv <- lookupEnv "EDITOR"
   case editorEnv of
-    Nothing -> error "please make sure $EDITOR is set"
+    Nothing -> abort "please make sure $EDITOR is set"
     Just editor -> do
       -- TODO: prepare the changelog
       (_, _, _, ph) <- createProcess (proc editor ["CHANGELOG.md"])
