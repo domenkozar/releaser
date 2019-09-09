@@ -151,7 +151,8 @@ gitTag tag = do
   tags <- gitGetTags
   if elem tag tags
   then abort "git tag already exists, please delete it and start over"
-  else void $ readProcess "git" ["tag", "--annotate", "--sign", tag] mempty
+  else interactiveProcess (proc "git" ["tag", "--annotate", "--sign", tag]) (return ()) $ \i-> do 
+    gitTag tag
 
 gitCommit :: String -> IO ()
 gitCommit message = do
@@ -184,10 +185,16 @@ changelogPrepare = do
     Nothing -> abort "please make sure $EDITOR is set"
     Just editor -> do
       -- TODO: prepare the changelog
-      (_, _, _, ph) <- createProcess (proc editor ["CHANGELOG.md"])
-      exitcode <- waitForProcess ph
-      case exitcode of
-        ExitSuccess -> return ()
-        ExitFailure i -> do
-          logStep $ editor <> " failed with " <> show i <> ", retrying"
-          changelogPrepare
+      interactiveProcess (proc editor ["CHANGELOG.md"]) (return ()) $ \i -> do
+        logStep $ editor <> " failed with " <> show i <> ", retrying"
+        changelogPrepare
+
+-- internal
+
+interactiveProcess :: CreateProcess -> IO b -> (Int -> IO b) -> IO b
+interactiveProcess cmd good bad = do
+  (_, _, _, ph) <- createProcess cmd
+  exitcode <- waitForProcess ph
+  case exitcode of
+    ExitSuccess -> good
+    ExitFailure i -> bad i
