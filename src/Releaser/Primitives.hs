@@ -140,10 +140,8 @@ gitGetTags = do
 gitCheckout :: String -> IO ()
 gitCheckout tag = do
   logStep $ "Running $ git checkout -b " <> tag
-  tags <- gitGetTags
-  if elem tag tags
-  then abort "git branch already exists, please delete it to start over"
-  else void $ readProcess "git" ["checkout", "-b", tag] mempty
+  -- TODO: check for existing branch
+  void $ readProcess "git" ["checkout", "-b", tag] mempty
 
 gitTag :: String -> IO ()
 gitTag tag = do
