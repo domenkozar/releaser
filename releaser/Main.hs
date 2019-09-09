@@ -1,14 +1,16 @@
 module Main (main) where
 
 import Releaser.Primitives
-
+import System.IO (hSetBuffering, stdout, stderr, BufferMode(..))
 
 main :: IO ()
 main = do
-  gitAssertEmptyStaging
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
 
   -- prepare release
   -- TODO: pass a list directories
+  gitAssertEmptyStaging
   version <- cabalBumpVersion "."
   let release = "v" <> version
   gitCheckout release
