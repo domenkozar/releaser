@@ -13,7 +13,6 @@ main = do
   gitAssertEmptyStaging
   version <- cabalBumpVersion "."
   let release = "v" <> version
-  gitCheckout release
   changelogPrepare
 
   -- make release
