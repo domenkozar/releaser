@@ -42,7 +42,7 @@ import Distribution.Types.PackageName (unPackageName)
 
 logStep :: String -> IO ()
 logStep txt = 
-  putStrLn $ color Yellow ">> " <> txt
+  putStrLn $ color Green ">> " <> txt
 
 prompt :: String -> IO String
 prompt str = do
