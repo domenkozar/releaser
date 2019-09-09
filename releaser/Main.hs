@@ -5,6 +5,8 @@ import Releaser.Primitives
 
 main :: IO ()
 main = do
+  gitAssertEmptyStaging
+
   -- prepare release
   -- TODO: pass a list directories
   version <- cabalBumpVersion "."
