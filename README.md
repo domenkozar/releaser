@@ -2,7 +2,7 @@
 
 Automation of Haskell package release process.
 
-# Usage 
+## Usage
 
 - `Releaser.Primitives` provides a bunch of functions
   to help automating release process.
@@ -18,4 +18,4 @@ Automation of Haskell package release process.
 
 ## Prior art
 
-- https://github.com/bgamari/hs-maintainer-tools
+- [bgamari/hs-maintainer-tools](https://github.com/bgamari/hs-maintainer-tools)
