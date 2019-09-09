@@ -129,8 +129,9 @@ cabalSdist dir = do
 cabalUpload :: FilePath -> IO ()
 cabalUpload sdistTarball = do
   logStep "Running $ cabal upload"
-  -- TODO: assert that credentials are configured via netrc
-  void $ readProcess "cabal" ["upload", sdistTarball] mempty
+  -- TODO: recommend that credentials are configured via ~/cabal/config
+  interactiveProcess (proc "cabal" ["upload", "--publish", sdistTarball]) (return ()) $ \_ -> do
+    cabalUpload sdistTarball
     
 gitGetTags :: IO [String]
 gitGetTags = do
