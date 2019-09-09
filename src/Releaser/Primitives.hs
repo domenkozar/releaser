@@ -47,7 +47,7 @@ logStep str =
 
 prompt :: String -> IO String
 prompt str = do
-  putStr $ color Yellow ">> " <> str
+  putStr $ color Blue ">> " <> str
   hFlush stdout
   getLine  
 
