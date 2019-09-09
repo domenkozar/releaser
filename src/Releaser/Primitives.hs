@@ -151,7 +151,7 @@ gitTag tag = do
 gitCommit :: String -> IO ()
 gitCommit message = do
   logStep $ "Running $ git commit "
-  void $ readProcess "git" ["commit", "-m", message] mempty
+  void $ readProcess "git" ["commit", "-a", "-m", message] mempty
 
 gitPush :: String -> IO ()
 gitPush remote = do
