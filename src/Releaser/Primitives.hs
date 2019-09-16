@@ -26,9 +26,12 @@ import System.Process
 import System.Console.Pretty (Color(..), color)
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..), exitFailure)
-import Text.Regex.PCRE
+import Text.Regex.TDFA
+import Text.Regex.TDFA.Text
 import Data.Functor (void)
 import Data.List (intercalate)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Text.ParserCombinators.ReadP (ReadP, readP_to_S)
 import Data.Version (parseVersion)
 import Distribution.PackageDescription.Parsec
@@ -36,7 +39,6 @@ import Distribution.Verbosity (silent)
 import Distribution.Types.PackageId (pkgVersion, pkgName)
 import Distribution.Types.PackageDescription (package)
 import Distribution.Types.GenericPackageDescription (packageDescription)
-import Distribution.PackageDescription.PrettyPrint (writeGenericPackageDescription)
 import Distribution.Types.Version (versionNumbers, mkVersion')
 import Distribution.Simple.Utils (tryFindPackageDesc)
 import Distribution.Types.PackageName (unPackageName)
@@ -53,7 +55,7 @@ prompt str = do
 
 promptRetry :: String -> IO ()
 promptRetry str =
-  void $ prompt $ str <> " failed. Retry? (press enter) "
+  void $ prompt $ str <> ". Retry? (press enter) "
 
 abort :: String -> IO a
 abort str = do
@@ -83,28 +85,26 @@ cabalRead dir = do
 -- | Given a folder, find a Cabal file and update the package version
 cabalWriteVersion :: FilePath -> String -> IO ()
 cabalWriteVersion dir versionStr = do
-  cabalFile <- tryFindPackageDesc dir
-  genericPackageDescription <- readGenericPackageDescription silent cabalFile
-  -- TODO: handle the read failure nicely
-  version <- case parseMaybe parseVersion versionStr of
-    Nothing -> abort "parsing the cabal version failed"
-    Just ver -> return ver
-  let
-    pd = packageDescription genericPackageDescription
-    p = package $ packageDescription genericPackageDescription
-    gpd = genericPackageDescription { packageDescription = pd { package = p { pkgVersion = mkVersion' version } } }
-  writeGenericPackageDescription cabalFile gpd
-  logStep $ "Bumped " <> unPackageName (pkgName p) <> " to " <> versionStr
-  where
-    parseMaybe :: ReadP a -> String -> Maybe a
-    parseMaybe parser input =
-      case readP_to_S parser input of
-          [] -> Nothing
-          xs -> Just $ fst (last xs)
+  if validCabalVersion versionStr
+  then do
+    cabalFile <- tryFindPackageDesc dir
+    cabalinfo <- cabalRead dir
+    cabal <- T.readFile cabalFile
+    let versionPrev :: T.Text
+        versionPrev = cabal =~ ("version:[ \t]*" ++ version cabalinfo)
+    if versionPrev == ""
+    then abort $ "Failed to replace version in " <> cabalFile <> ", please open an issue at https://github.com/domenkozar/releaser/issues"
+    else do
+      T.writeFile cabalFile $ T.replace versionPrev ("version: " <> T.pack versionStr) cabal
+      logStep $ "Bumped " <> name cabalinfo <> " to " <> versionStr
+  else do
+    promptRetry "Cabal version does not match /^[0-9]+([.][0-9]+)*$/"
+    void $ cabalBumpVersion dir
+    
 
 validCabalVersion :: String -> Bool
 validCabalVersion version =
-  version =~ "^[0-9]+([.][0-9]+)*$"
+  version =~ ("^[0-9]+([.][0-9]+)*$" :: String)
 
 putStrLnErr :: String -> IO ()
 putStrLnErr = hPutStrLn stderr
@@ -113,13 +113,8 @@ cabalBumpVersion :: FilePath -> IO String
 cabalBumpVersion dir = do
   cabalinfo <- cabalRead dir
   version <- prompt $ "Bump cabal version from " <> version cabalinfo <> " to: "
-  if validCabalVersion version
-  then do 
-    cabalWriteVersion dir version
-    return version
-  else do
-    putStrLnErr "Cabal version does not match /^[0-9]+([.][0-9]+)*$/. Try again."
-    cabalBumpVersion dir
+  cabalWriteVersion dir version
+  return version
 
 cabalSdist :: FilePath -> IO FilePath
 cabalSdist dir = do
@@ -148,7 +143,7 @@ gitCheckout tag = do
   logStep $ "Running $ git checkout -b " <> tag
   -- TODO: check for existing branch
   interactiveProcess (proc "git" ["checkout", "-b", tag]) $ \i -> do 
-    promptRetry "git checkout"
+    promptRetry "git checkout failed"
     gitCheckout tag
 
 gitTag :: String -> IO ()
@@ -158,14 +153,14 @@ gitTag tag = do
   if elem tag tags
   then abort "git tag already exists, please delete it and start over"
   else interactiveProcess (proc "git" ["tag", "--annotate", "--sign", tag]) $ \i -> do 
-    promptRetry "git tag"
+    promptRetry "git tag failed"
     gitTag tag
 
 gitCommit :: String -> IO ()
 gitCommit message = do
   logStep $ "Running $ git commit "
   interactiveProcess (proc "git" ["commit", "-a", "-m", message]) $ \i -> do 
-    promptRetry "git commit"
+    promptRetry "git commit failed"
     gitCommit message
 
 
