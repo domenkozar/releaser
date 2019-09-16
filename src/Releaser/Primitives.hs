@@ -51,6 +51,10 @@ prompt str = do
   hFlush stdout
   getLine  
 
+promptRetry :: String -> IO ()
+promptRetry str =
+  void $ prompt $ str <> " failed. Retry? (press enter) "
+
 abort :: String -> IO a
 abort str = do
   putStrLnErr $ color Red ">> " <> str
@@ -130,7 +134,8 @@ cabalUpload :: FilePath -> IO ()
 cabalUpload sdistTarball = do
   logStep "Running $ cabal upload"
   -- TODO: recommend that credentials are configured via ~/cabal/config
-  interactiveProcess (proc "cabal" ["upload", "--publish", sdistTarball]) (return ()) $ \_ -> do
+  interactiveProcess (proc "cabal" ["upload", "--publish", sdistTarball]) $ \_ -> do
+    promptRetry "cabal upload"
     cabalUpload sdistTarball
     
 gitGetTags :: IO [String]
@@ -142,7 +147,9 @@ gitCheckout :: String -> IO ()
 gitCheckout tag = do
   logStep $ "Running $ git checkout -b " <> tag
   -- TODO: check for existing branch
-  void $ readProcess "git" ["checkout", "-b", tag] mempty
+  interactiveProcess (proc "git" ["checkout", "-b", tag]) $ \i -> do 
+    promptRetry "git checkout"
+    gitCheckout tag
 
 gitTag :: String -> IO ()
 gitTag tag = do
@@ -150,22 +157,28 @@ gitTag tag = do
   tags <- gitGetTags
   if elem tag tags
   then abort "git tag already exists, please delete it and start over"
-  else interactiveProcess (proc "git" ["tag", "--annotate", "--sign", tag]) (return ()) $ \i-> do 
+  else interactiveProcess (proc "git" ["tag", "--annotate", "--sign", tag]) $ \i -> do 
+    promptRetry "git tag"
     gitTag tag
 
 gitCommit :: String -> IO ()
 gitCommit message = do
   logStep $ "Running $ git commit "
-  void $ readProcess "git" ["commit", "-a", "-m", message] mempty
+  interactiveProcess (proc "git" ["commit", "-a", "-m", message]) $ \i -> do 
+    promptRetry "git commit"
+    gitCommit message
+
 
 gitPush :: String -> IO ()
 gitPush remote = do
   logStep $ "Pushing git to " <> remote
-  void $ readProcess "git" ["push", remote, "HEAD"] mempty
+  interactiveProcess (proc "git" ["push", remote, "HEAD"]) $ \i -> do 
+    promptRetry "git push"
+    gitPush remote
 
 gitPushTags :: String -> IO ()
 gitPushTags remote = do
-  logStep $ "Pushing git to " <> remote
+  logStep $ "Pushing git tags to " <> remote
   void $ readProcess "git" ["push", remote, "--tags"] mempty
 
 gitAssertEmptyStaging :: IO ()
@@ -184,16 +197,16 @@ changelogPrepare = do
     Nothing -> abort "please make sure $EDITOR is set"
     Just editor -> do
       -- TODO: prepare the changelog
-      interactiveProcess (proc editor ["CHANGELOG.md"]) (return ()) $ \i -> do
+      interactiveProcess (proc editor ["CHANGELOG.md"]) $ \i -> do
         logStep $ editor <> " failed with " <> show i <> ", retrying"
         changelogPrepare
 
 -- internal
 
-interactiveProcess :: CreateProcess -> IO b -> (Int -> IO b) -> IO b
-interactiveProcess cmd good bad = do
+interactiveProcess :: CreateProcess -> (Int -> IO ()) -> IO ()
+interactiveProcess cmd bad = do
   (_, _, _, ph) <- createProcess cmd
   exitcode <- waitForProcess ph
   case exitcode of
-    ExitSuccess -> good
+    ExitSuccess -> return ()
     ExitFailure i -> bad i
