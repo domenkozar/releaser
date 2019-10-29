@@ -120,8 +120,8 @@ cabalSdist :: FilePath -> IO FilePath
 cabalSdist dir = do
   logStep "Running $ cabal dist"
   cabalinfo <- cabalRead dir
-  void $ readProcess "cabal" ["sdist"] mempty
-  let sdistTarball = "dist/" <> name cabalinfo <> "-" <> version cabalinfo <> ".tar.gz"
+  void $ readProcess "cabal" ["v2-sdist"] mempty
+  let sdistTarball = "dist-newstyle/sdist/" <> name cabalinfo <> "-" <> version cabalinfo <> ".tar.gz"
   logStep $ "Created " <> sdistTarball
   return sdistTarball
 
