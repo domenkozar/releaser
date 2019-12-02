@@ -1,5 +1,9 @@
 # Revision history for releaser
 
+## 0.2.1.0 -- 2019-12-02
+
+* Use cabal v2 commands to avoid compatibility issues
+
 ## 0.2.0.0 -- 2019-09-16
 
 * Write cabal versions using a regex
