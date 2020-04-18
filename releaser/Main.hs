@@ -26,5 +26,5 @@ main = do
   cabalUpload tarball
 
   -- make haddocks and upload them
-  tarball <- cabalMakeHaddocks "."
-  cabalUploadDocs tarball
+  docsTarball <- cabalMakeHaddocks "."
+  cabalUploadDocs docsTarball
