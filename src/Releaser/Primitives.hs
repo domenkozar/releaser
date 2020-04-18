@@ -6,6 +6,8 @@ module Releaser.Primitives (
   , cabalBumpVersion
   , cabalSdist
   , cabalUpload
+  , cabalMakeHaddocks
+  , cabalUploadDocs
   -- git primitives
   , gitCheckout
   , gitGetTags
@@ -124,6 +126,23 @@ cabalSdist dir = do
   let sdistTarball = "dist-newstyle/sdist/" <> name cabalinfo <> "-" <> version cabalinfo <> ".tar.gz"
   logStep $ "Created " <> sdistTarball
   return sdistTarball
+
+cabalMakeHaddocks :: FilePath -> IO FilePath
+cabalMakeHaddocks dir = do
+  logStep "Running $ cabal haddock"
+  cabalinfo <- cabalRead dir
+  void $ readProcess "cabal" ["v2-haddock", "--haddock-for-hackage"] mempty
+  let docsTarball = "dist-newstyle/" <> name cabalinfo <> "-" <> version cabalinfo <> "-docs.tar.gz"
+  logStep $ "Created " <> docsTarball
+  return docsTarball
+
+cabalUploadDocs :: FilePath -> IO ()
+cabalUploadDocs docsTarball = do
+  logStep "Running $ cabal upload -d"
+  -- TODO: recommend that credentials are configured via ~/cabal/config
+  interactiveProcess (proc "cabal" ["upload", "-d", "--publish", docsTarball]) $ \_ -> do
+    promptRetry "cabal upload -d"
+    cabalUploadDocs docsTarball
 
 cabalUpload :: FilePath -> IO ()
 cabalUpload sdistTarball = do
