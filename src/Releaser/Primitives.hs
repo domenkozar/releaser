@@ -71,7 +71,7 @@ data CabalInfo = CabalInfo
 cabalRead :: FilePath -> IO CabalInfo
 cabalRead dir = do
   logStep $ "Looking for a cabal file in " <> dir
-  cabalFile <- tryFindPackageDesc dir
+  cabalFile <- tryFindPackageDesc silent dir
   genericPackageDescription <- readGenericPackageDescription silent cabalFile
   let pkgversion = pkgVersion $ package $ packageDescription genericPackageDescription
       pkgname = pkgName $ package $ packageDescription genericPackageDescription
@@ -87,7 +87,7 @@ cabalWriteVersion :: FilePath -> String -> IO ()
 cabalWriteVersion dir versionStr = do
   if validCabalVersion versionStr
   then do
-    cabalFile <- tryFindPackageDesc dir
+    cabalFile <- tryFindPackageDesc silent dir
     cabalinfo <- cabalRead dir
     cabal <- T.readFile cabalFile
     let versionPrev :: T.Text

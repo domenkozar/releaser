@@ -24,7 +24,6 @@ library
         base >=4.7 && <5,
         Cabal -any,
         regex-tdfa -any,
-        regex-tdfa-text -any,
         process -any,
         pretty-terminal -any,
         text -any
