@@ -1,6 +1,6 @@
 name: Haskell CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -8,10 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Stack
-      run: |
-        mkdir -p ~/.local/bin
-        curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+    - uses: actions/checkout@v2
+    - uses: mstksg/setup-stack@v2
     - name: Build & Test
       run: ~/.local/bin/stack --no-terminal test --fast
