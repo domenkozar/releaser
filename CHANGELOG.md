@@ -1,5 +1,11 @@
 # Revision history for releaser
 
+## 0.3.0.0 -- 2020-05-04
+
+* Upload to haddock support
+
+* LTS-15 support
+
 ## 0.2.1.0 -- 2019-12-02
 
 * Use cabal v2 commands to avoid compatibility issues
