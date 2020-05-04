@@ -2,6 +2,7 @@ module Main (main) where
 
 import Releaser.Primitives
 import System.IO (hSetBuffering, stdout, stderr, BufferMode(..))
+import Control.Monad (when)
 
 main :: IO ()
 main = do
@@ -26,5 +27,7 @@ main = do
   cabalUpload tarball
 
   -- make haddocks and upload them
-  docsTarball <- cabalMakeHaddocks "."
-  cabalUploadDocs docsTarball
+  detectedBuildSystem <- detectBuildSystem "."
+  when (detectedBuildSystem == Cabal) $ do
+     docsTarball <- cabalMakeHaddocks "."
+     cabalUploadDocs docsTarball

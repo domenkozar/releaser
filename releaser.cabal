@@ -22,6 +22,8 @@ library
     default-extensions: OverloadedStrings
     build-depends:
         base >=4.7 && <5,
+        directory -any,
+        filepath -any,
         Cabal -any,
         regex-tdfa -any,
         process -any,
