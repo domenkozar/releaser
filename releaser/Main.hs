@@ -24,3 +24,7 @@ main = do
   gitPush "origin"
   gitPushTags "origin"
   cabalUpload tarball
+
+  -- make haddocks and upload them
+  docsTarball <- cabalMakeHaddocks "."
+  cabalUploadDocs docsTarball
