@@ -21,6 +21,8 @@ module Releaser.Primitives (
   , abort
   , logStep
   , changelogPrepare
+  , detectBuildSystem
+  , BuildSystem(Cabal,Stack)
   ) where
 
 import System.IO 
@@ -28,6 +30,8 @@ import System.Process
 import System.Console.Pretty (Color(..), color)
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..), exitFailure)
+import System.FilePath ((</>))
+import System.Directory (doesFileExist)
 import Text.Regex.TDFA
 import Text.Regex.TDFA.Text
 import Data.Functor (void)
@@ -126,6 +130,16 @@ cabalSdist dir = do
   let sdistTarball = "dist-newstyle/sdist/" <> name cabalinfo <> "-" <> version cabalinfo <> ".tar.gz"
   logStep $ "Created " <> sdistTarball
   return sdistTarball
+
+data BuildSystem = Cabal | Stack deriving (Show, Eq)
+
+-- | Assume stack if there is a stack.yaml, cabal otherwise
+detectBuildSystem :: FilePath -> IO BuildSystem
+detectBuildSystem dir = do
+  hasStackFile <- doesFileExist $ dir </> "stack.yaml"
+  let buildSystem = if hasStackFile then Stack else Cabal
+  logStep $ "Assuming build system: " ++ show buildSystem
+  pure buildSystem
 
 cabalMakeHaddocks :: FilePath -> IO FilePath
 cabalMakeHaddocks dir = do
