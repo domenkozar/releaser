@@ -22,7 +22,8 @@ library
     default-extensions: OverloadedStrings
     build-depends:
         base >=4.7 && <5,
-        Cabal -any,
+        bytestring,
+        Cabal >=3.6,
         regex-tdfa -any,
         process -any,
         pretty-terminal -any,

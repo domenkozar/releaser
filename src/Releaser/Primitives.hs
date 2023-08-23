@@ -30,6 +30,7 @@ import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..), exitFailure)
 import Text.Regex.TDFA
 import Text.Regex.TDFA.Text
+import qualified Data.ByteString as BS
 import Data.Functor (void)
 import Data.List (intercalate)
 import qualified Data.Text as T
@@ -37,13 +38,15 @@ import qualified Data.Text.IO as T
 import Text.ParserCombinators.ReadP (ReadP, readP_to_S)
 import Data.Version (parseVersion)
 import Distribution.PackageDescription.Parsec
-import Distribution.Verbosity (silent)
+import Distribution.Parsec (PWarning (..), showPError)
+import Distribution.Verbosity (Verbosity, silent, normal)
 import Distribution.Types.PackageId (pkgVersion, pkgName)
 import Distribution.Types.PackageDescription (package)
-import Distribution.Types.GenericPackageDescription (packageDescription)
+import Distribution.Types.GenericPackageDescription (GenericPackageDescription, packageDescription)
 import Distribution.Types.Version (versionNumbers, mkVersion')
-import Distribution.Simple.Utils (tryFindPackageDesc)
+import Distribution.Simple.Utils (tryFindPackageDesc, die')
 import Distribution.Types.PackageName (unPackageName)
+import Data.Foldable (toList)
 
 logStep :: String -> IO ()
 logStep str = 
@@ -68,6 +71,13 @@ data CabalInfo = CabalInfo
   { name :: String
   , version :: String
   }
+
+readGenericPackageDescription :: Verbosity -> FilePath -> IO GenericPackageDescription
+readGenericPackageDescription v p = do
+  bs <- BS.readFile p
+  case runParseResult (parseGenericPackageDescription bs) of
+    (_warnings, Right gpd) -> pure gpd
+    (_warnings, Left  (v, e))  -> fail $ "Cabal file " ++ p ++ " has problems:\n" ++ unlines (map (showPError p) (toList e))
 
 -- | Given a folder, find a Cabal file and read the package version
 cabalRead :: FilePath -> IO CabalInfo
