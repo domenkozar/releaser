@@ -4,7 +4,7 @@ synopsis: Automation of Haskell package release process
 version: 0.3.0.0
 license: Apache-2.0
 license-file: LICENSE
-maintainer: domen@dev.si
+maintainer: info@hercules-ci.com
 author: Domen Kozar
 category: Development
 extra-source-files:
